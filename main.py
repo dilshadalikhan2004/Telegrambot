@@ -90,6 +90,13 @@ def send_welcome(message):
 
     bot.send_message(message.chat.id, "Welcome to Lyra, Your Personal Museum Reservation Bot! Please choose an option:", reply_markup=main_menu())
 
+def select_ticket_quantity_menu():
+    markup = InlineKeyboardMarkup(row_width=3)
+    quantities = [str(i) for i in range(1, 11)]  # Allow selection of up to 10 tickets
+    buttons = [InlineKeyboardButton(qty, callback_data=f"qty_{qty}") for qty in quantities]
+    markup.add(*buttons)
+    return markup
+
 # Function to display city selection
 def select_city_menu():
     markup = InlineKeyboardMarkup(row_width=2)

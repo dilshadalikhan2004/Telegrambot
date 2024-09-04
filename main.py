@@ -54,14 +54,29 @@ conn.commit()
 # Razorpay client setup
 razorpay_client = razorpay.Client(auth=("rzp_test_LoFPJBZ53pNKU5", "ceECCpyBbOYkiH3CGeFf9tmI"))
 
+# City and Museum Data
+cities = {
+    "New Delhi": ["National Museum", "Crafts Museum","Rail Museum"],
+    "Mumbai": ["Chhatrapati Shivaji Maharaj Vastu Sangrahalaya", "Dr. Bhau Daji Lad Museum"],
+    "Kolkata": ["Indian Museum", "Victoria Memorial"],
+    "Chennai": ["Government Museum", "Fort St. George Museum"],
+    "Jaipur":["Albert Hall Museum","City Palace Museum"],
+    "Amritsar":["Partition Museum"],
+    "Udaipur":["City Palace","Vintage And Classic Car Museum"],
+    "Jammu":["Dogra Art Museum"],
+    "Mysore":["Folklore Museum"],
+    "Hyderabad":["Salar Jung Museum"],
+}
+
 # Function to display the main menu with buttons
 def main_menu():
     markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+   # start_btn = KeyboardButton('/start')
     book_btn = KeyboardButton('/book')
     cancel_btn = KeyboardButton('/cancel')
     issue_btn = KeyboardButton('/issue')
-    start_btn = KeyboardButton('/start')
-    markup.add(start_btn, book_btn, issue_btn, cancel_btn)
+   
+    markup.add( book_btn, issue_btn, cancel_btn)
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -73,7 +88,21 @@ def send_welcome(message):
     ''', (message.from_user.id, message.from_user.username, message.from_user.first_name, message.from_user.last_name))
     conn.commit()
 
-    bot.send_message(message.chat.id, "Welcome to Lyra Your Personal Museum Reservation Bot! Please choose an option:", reply_markup=main_menu())
+    bot.send_message(message.chat.id, "Welcome to Lyra, Your Personal Museum Reservation Bot! Please choose an option:", reply_markup=main_menu())
+
+# Function to display city selection
+def select_city_menu():
+    markup = InlineKeyboardMarkup(row_width=2)
+    buttons = [InlineKeyboardButton(city, callback_data=f"city_{city}") for city in cities.keys()]
+    markup.add(*buttons)
+    return markup
+
+# Function to display museum selection based on selected city
+def select_museum_menu(city):
+    markup = InlineKeyboardMarkup(row_width=2)
+    buttons = [InlineKeyboardButton(museum, callback_data=f"museum_{museum}") for museum in cities[city]]
+    markup.add(*buttons)
+    return markup
 
 # Function to display available dates
 def select_date_menu():
@@ -94,12 +123,20 @@ def select_time_menu(date_selected):
 
 @bot.message_handler(commands=['book'])
 def handle_book(message):
-    bot.send_message(message.chat.id, "Please select the date you want to visit:", reply_markup=select_date_menu())
+    bot.send_message(message.chat.id, "Please select the city you want to visit:", reply_markup=select_city_menu())
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     if call.message:
-        if " " in call.data:  # Date and Time selected
+        if call.data.startswith("city_"):  # City selected
+            selected_city = call.data.split("_")[1]
+            bot.send_message(call.message.chat.id, f"You selected {selected_city}. Now choose the museum:", reply_markup=select_museum_menu(selected_city))
+        
+        elif call.data.startswith("museum_"):  # Museum selected
+            selected_museum = call.data.split("_")[1]
+            bot.send_message(call.message.chat.id, f"You selected {selected_museum}. Now choose the date:", reply_markup=select_date_menu())
+        
+        elif " " in call.data:  # Date and Time selected
             user_id = call.from_user.id
             visit_date = india_tz.localize(datetime.strptime(call.data, '%Y-%m-%d %H:%M'))
             expiration_time = visit_date + timedelta(hours=24)
@@ -126,7 +163,7 @@ def handle_cancel(message):
     user_id = message.from_user.id
     cursor.execute('DELETE FROM tickets WHERE user_id = ? AND expiration_time > ?', (user_id, datetime.now(india_tz).strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit()
-    bot.send_message(message.chat.id, "Your booking has been canceled.")
+    bot.send_message(message.chat.id, "Your reservation has been canceled.")
 
 @bot.message_handler(commands=['issue'])
 def handle_issue(message):

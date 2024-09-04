@@ -21,7 +21,7 @@ try:
     columns = [col[1] for col in cursor.fetchall()]
     if 'payment_id' not in columns:
         cursor.execute('ALTER TABLE tickets ADD COLUMN payment_id TEXT')
-        conn.commit()``
+        conn.commit()
 except sqlite3.OperationalError as e:
     print(f"Error checking or altering table: {e}")
 
